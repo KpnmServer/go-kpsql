@@ -13,6 +13,7 @@ const (
 
 type SqlDatabase interface{
 	DB()(*sql.DB)
+	Close()(error)
 	GetTable(name string, ins interface{})(SqlTable)
 	GetTableBySqltype(name string, sqltype *SqlType)(SqlTable)
 }
@@ -40,6 +41,10 @@ func Open(name string, dbDSN string)(sqldb SqlDatabase, err error){
 
 func (sqldb *sqlDatabase)DB()(*sql.DB){
 	return sqldb.dbins
+}
+
+func (sqldb *sqlDatabase)Close()(error){
+	return sqldb.dbins.Close()
 }
 
 func (sqldb *sqlDatabase)GetTable(name string, ins interface{})(SqlTable){

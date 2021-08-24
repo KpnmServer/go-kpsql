@@ -134,7 +134,7 @@ func (tb *sqlTable)Update(ins interface{}, argv WhereMap, taglist []string, limi
 	var command string = "UPDATE " + tb.name + " SET "
 	var values []interface{}
 	revalue := reflect.ValueOf(ins).Elem()
-	if len(taglist) == 0 {
+	if taglist == nil || len(taglist) == 0 {
 		for tag, field := range tb.sqltype.fieldMap {
 			v := revalue.FieldByName(field.Name).Interface()
 			command += "`" + tag + "` = ?,"

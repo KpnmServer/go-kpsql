@@ -24,7 +24,7 @@ if err != nil {
 }
 ```
 
-我们会在`Open`函数中调用`sql.DB.Ping`自动为您检测数据库是否连通, 如果不联通*(即ping方法返回了err)*我们**仍会**将`SqlDatabase`返回  
+我们会在`Open`函数中调用`sql.DB.Ping`自动为您检测数据库是否连通, 如果不连通*(即ping方法返回了err)*我们**仍会**将`SqlDatabase`与`error`一起返回  
 您可以调用`SqlDatabase.DB()`方法获取原生`sql.DB`对象, 并重新执行Ping方法或进行其他操作
 
 ### 2. 创建数据库字段类型
@@ -138,8 +138,8 @@ for _, p := range rows {
 对于`Update`方法, `taglist`参数为需要更新的**数据库字段名***(即使用指定tag定义的值)*, 而**不是**结构体字段名  
   如果您的`taglist`为`nil`或者长度为0, 那么将会更新所有已绑定tag的字段
 
-对于`Insert`和`Update`方法, `ins`为**指向对象实例的指针**, 我们并没有判断您传入的实例类型是否与之前传入`GetTable`方法中的一致
+对于`Insert`和`Update`方法, `ins`为**指向对象实例的指针**, 我们并没有判断您传入的实例类型是否与之前传入`GetTable`方法中的一致  
   但是请注意, **如果对象的结构不同**, 极有可能导致程序**崩溃**
 
 在`Insert`, `Delete`, `Update`和`Search`方法中, 我们自动帮您执行了所有需要执行的清理操作, 您无需为此担心  
-  但是当您使用完数据库后您仍需调用`SqlDatabase.Close()`或`SqlDatabase.DB().Close()`方法断开数据库连接
+  但是当您使用完数据库后您**仍需调用**`SqlDatabase.Close()`或`SqlDatabase.DB().Close()`方法断开数据库连接, 以防止连接溢出

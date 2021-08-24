@@ -10,7 +10,7 @@
 
 ## 使用
 
-1. 创建`SqlDatabase`对象
+### 1. 创建`SqlDatabase`对象
 
 您可以使用`kpsql.Open("[数据库驱动名称]", "[数据库连接地址]")`创建`SqlDatabase`对象  
 该方法参数列表与`database/sql`库中的`Open`方法完全相同
@@ -27,7 +27,7 @@ if err != nil {
 我们会在`Open`函数中调用`sql.DB.Ping`自动为您检测数据库是否连通, 如果不联通*(即ping方法返回了err)*我们**仍会**将`SqlDatabase`返回  
 您可以调用`SqlDatabase.DB()`方法获取原生`sql.DB`对象, 并重新执行Ping方法或进行其他操作
 
-2. 创建数据库字段类型
+### 2. 创建数据库字段类型
 
 数据库字段应为**struct**类型, 且*无需实现任何接口*, 但是需要**添加指定tag**到您的**公开字段**中
 
@@ -56,7 +56,7 @@ type People struct{
 
 如果您**未给字段分配**指定tag, 该字段也**不会参与**序列化与反序列化
 
-3. 创建`SqlTable`对象
+### 3. 创建`SqlTable`对象
 
 您有两种方式创建`SqlTable`对象, 第一种是使用`SqlDatabase.GetTable("[数据表名称]", [指向类型实例的指针])`  
 第二种是使用`SqlDatabase.GetTableBySqltype("[数据表名称]", [SqlType])`创建  
@@ -74,7 +74,7 @@ sqltb := sqldb.GetTableBySqltype("myusers", sqltype)
 sqltb := sqldb.GetTableBySqltype("myusers", NewSqlType(&People{}))
 ```
 
-4. 使用`SqlTable`
+### 4. 使用`SqlTable`
 
 我们提供了4个方法, 分别对应 增/删/改/查
 方法定义如下

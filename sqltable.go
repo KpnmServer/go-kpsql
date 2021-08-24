@@ -30,10 +30,10 @@ func (wmap WhereMap)Format()(command string, values []interface{}){
 }
 
 type SqlTable interface{
-	Insert(ins interface{})(err error)
-	Delete(wheremap WhereMap, limit ...uint)(n int, err error)
-	Update(ins interface{}, wheremap WhereMap, taglist []string, limit ...uint)(n int, err error)
-	Select(wheremap WhereMap, limit ...int)(rows []interface{}, err error)
+	Insert(ins interface{})(n int64, err error)
+	Delete(wheremap WhereMap, limit ...uint)(n int64, err error)
+	Update(ins interface{}, wheremap WhereMap, taglist []string, limit ...uint)(n int64, err error)
+	Select(wheremap WhereMap, limit ...uint)(rows []interface{}, err error)
 }
 
 type sqlTable struct{
@@ -50,7 +50,7 @@ func NewSqlTable(sqldb SqlDatabase, name string, sqltype *SqlType)(tb SqlTable){
 	}
 }
 
-func (tb *sqlTable)Insert(ins ...interface{})(n int, err error){
+func (tb *sqlTable)Insert(ins interface{})(n int64, err error){
 	var(
 		tx   *sql.Tx
 		stmt *sql.Stmt
@@ -64,7 +64,7 @@ func (tb *sqlTable)Insert(ins ...interface{})(n int, err error){
 	revalue := reflect.ValueOf(ins).Elem()
 	seats := ""
 	for tag, field := range tb.sqltype.fieldMap {
-		v := revalue.FieldByName(field.Name).Interface()
+		v := getReflectValue(revalue.FieldByName(field.Name))
 		command += "`" + tag + "`,"
 		seats += "?,"
 		values = append(values, v)
@@ -80,10 +80,14 @@ func (tb *sqlTable)Insert(ins ...interface{})(n int, err error){
 	if err != nil { return }
 	tx.Commit(); tx = nil
 
-	return res.RowsAffected(), nil
+	n, err = res.LastInsertId()
+	if err != nil {
+		n = -1
+	}
+	return n, nil
 }
 
-func (tb *sqlTable)Delete(argv WhereMap, limit ...uint)(n int, err error){
+func (tb *sqlTable)Delete(argv WhereMap, limit ...uint)(n int64, err error){
 	var(
 		tx   *sql.Tx
 		stmt *sql.Stmt
@@ -111,10 +115,14 @@ func (tb *sqlTable)Delete(argv WhereMap, limit ...uint)(n int, err error){
 	if err != nil { return }
 	tx.Commit(); tx = nil
 
-	return res.RowsAffected(), nil
+	n, err = res.RowsAffected()
+	if err != nil {
+		n = -1
+	}
+	return n, nil
 }
 
-func (tb *sqlTable)Update(ins interface{}, argv WhereMap, taglist []string, limit ...uint)(n int, err error){
+func (tb *sqlTable)Update(ins interface{}, argv WhereMap, taglist []string, limit ...uint)(n int64, err error){
 	var(
 		tx   *sql.Tx
 		stmt *sql.Stmt
@@ -159,10 +167,14 @@ func (tb *sqlTable)Update(ins interface{}, argv WhereMap, taglist []string, limi
 	if err != nil { return }
 	tx.Commit(); tx = nil
 
-	return res.RowsAffected(), nil
+	n, err = res.RowsAffected()
+	if err != nil {
+		n = -1
+	}
+	return n, nil
 }
 
-func (tb *sqlTable)Select(argv WhereMap, limit ...int)(items []interface{}, err error){
+func (tb *sqlTable)Select(argv WhereMap, limit ...uint)(items []interface{}, err error){
 	var(
 		tx   *sql.Tx
 		stmt *sql.Stmt

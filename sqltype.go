@@ -8,6 +8,7 @@ import (
 type SqlType struct{
 	instance interface{}
 	retype reflect.Type
+	primaryKey string
 	tagList []string
 	fieldMap map[string]reflect.StructField
 }
@@ -22,6 +23,7 @@ func NewSqlType(ins interface{})(sqltype *SqlType){
 	sqltype = &SqlType{
 		instance: ins,
 		retype: retype,
+		primaryKey: "",
 		tagList: make([]string, 0, nf),
 		fieldMap: make(map[string]reflect.StructField),
 	}
@@ -30,7 +32,11 @@ func NewSqlType(ins interface{})(sqltype *SqlType){
 		tag := field.Tag
 		sqltag, ok := tag.Lookup("sql")
 		if !ok {
-			continue
+			sqltag, ok = tag.Lookup("sqlk")
+			if !ok {
+				continue
+			}
+			sqltype.primaryKey = sqltag
 		}
 		sqltype.tagList = append(sqltype.tagList, sqltag)
 		sqltype.fieldMap[sqltag] = field
@@ -43,7 +49,7 @@ func (sqltype *SqlType)newBy(row []interface{})(obj interface{}){
 	for i, tag := range sqltype.tagList {
 		fie := sqltype.fieldMap[tag]
 		field := revalue.FieldByName(fie.Name)
-		field.Set(reflect.ValueOf(row[i]).Elem())
+		setReflectValue(field, row[i])
 	}
 	return revalue.Interface()
 }

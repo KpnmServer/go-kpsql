@@ -3,10 +3,14 @@ package kpsql
 
 import (
 	time "time"
+	hex "encoding/hex"
 	reflect "reflect"
 )
 
 func newByType(ttype reflect.Type)(interface{}){
+	if ttype.Kind() == reflect.Ptr {
+		ttype = ttype.Elem()
+	}
 	switch ttype.Kind() {
 	case reflect.Bool:
 		return new(bool)
@@ -36,6 +40,8 @@ func newByType(ttype reflect.Type)(interface{}){
 		return new(float64)
 	case reflect.String:
 		return new(string)
+	case reflect.Array:
+		return new(string)
 	default:
 		switch ttype.Name() {
 		case "time.Time":
@@ -43,7 +49,33 @@ func newByType(ttype reflect.Type)(interface{}){
 		}
 	}
 	panic("Unknow type " + ttype.Name())
-	return nil
+	return reflect.New(ttype)
+}
+
+func setReflectValue(rvalue reflect.Value, value interface{}){
+	rtype := rvalue.Type()
+	switch rtype.Kind() {
+	case reflect.Array:
+		hexstr := value.(string)
+		bytes, err := hex.DecodeString(hexstr)
+		if err == nil {
+			rvalue.SetBytes(bytes)
+		}
+	default:
+		rvalue.Set(reflect.ValueOf(value).Elem())
+	}
+}
+
+func getReflectValue(rvalue reflect.Value)(interface{}){
+	rtype := rvalue.Type()
+	switch rtype.Kind() {
+	case reflect.Array:
+		bytes := rvalue.Bytes()
+		hexstr := hex.EncodeToString(bytes)
+		return hexstr
+	default:
+		return rvalue.Interface()
+	}
 }
 
 func cloneReflectValue(basevalue reflect.Value)(revalue reflect.Value){

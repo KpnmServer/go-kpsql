@@ -7,6 +7,10 @@ import (
 	reflect "reflect"
 )
 
+func sqlization(value interface{})(interface{}){
+	return sqlizationReflect(reflect.ValueOf(value))
+}
+
 func newByType(ttype reflect.Type)(interface{}){
 	if ttype.Kind() == reflect.Ptr {
 		ttype = ttype.Elem()
@@ -66,7 +70,7 @@ func setReflectValue(rvalue reflect.Value, value interface{}){
 	}
 }
 
-func getReflectValue(rvalue reflect.Value)(interface{}){
+func sqlizationReflect(rvalue reflect.Value)(interface{}){
 	rtype := rvalue.Type()
 	switch rtype.Kind() {
 	case reflect.Array:

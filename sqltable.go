@@ -23,7 +23,7 @@ func (wmap WhereMap)Format()(command string, values []interface{}){
 	command = " WHERE "
 	for _, v := range wmap {
 		command += fmt.Sprintf("`%s` %s ? %s", v.Key, v.Cond, v.Next)
-		values = append(values, v.Value)
+		values = append(values, sqlization(v.Value))
 	}
 	command = command[:len(command) - 1 - len(wmap[len(wmap) - 1].Next)]
 	return
@@ -34,6 +34,7 @@ type SqlTable interface{
 	Delete(wheremap WhereMap, limit ...uint)(n int64, err error)
 	Update(ins interface{}, wheremap WhereMap, taglist []string, limit ...uint)(n int64, err error)
 	Select(wheremap WhereMap, limit ...uint)(rows []interface{}, err error)
+	Count(wheremap WhereMap, limit ...uint)(n int64, err error)
 }
 
 type sqlTable struct{
@@ -64,7 +65,7 @@ func (tb *sqlTable)Insert(ins interface{})(n int64, err error){
 	revalue := reflect.ValueOf(ins).Elem()
 	seats := ""
 	for tag, field := range tb.sqltype.fieldMap {
-		v := getReflectValue(revalue.FieldByName(field.Name))
+		v := sqlizationReflect(revalue.FieldByName(field.Name))
 		command += "`" + tag + "`,"
 		seats += "?,"
 		values = append(values, v)
@@ -136,9 +137,11 @@ func (tb *sqlTable)Update(ins interface{}, argv WhereMap, taglist []string, limi
 	revalue := reflect.ValueOf(ins).Elem()
 	if taglist == nil || len(taglist) == 0 {
 		for tag, field := range tb.sqltype.fieldMap {
-			v := revalue.FieldByName(field.Name).Interface()
-			command += "`" + tag + "` = ?,"
-			values = append(values, v)
+			if tag != tb.sqltype.primaryKey {
+				v := revalue.FieldByName(field.Name).Interface()
+				command += "`" + tag + "` = ?,"
+				values = append(values, v)
+			}
 		}
 	}else{
 		for _, tag := range taglist {
@@ -148,6 +151,10 @@ func (tb *sqlTable)Update(ins interface{}, argv WhereMap, taglist []string, limi
 		}
 	}
 	command = command[:len(command) - 1]
+	if argv == nil && tb.sqltype.primaryKey != "" {
+		argv = WhereMap{{tb.sqltype.primaryKey, "=",
+			revalue.FieldByName(tb.sqltype.fieldMap[tb.sqltype.primaryKey].Name).Interface(), ""}}
+	}
 	wcmd, where_values := argv.Format()
 	command += wcmd
 	values = append(values, where_values...)
@@ -218,4 +225,53 @@ func (tb *sqlTable)Select(argv WhereMap, limit ...uint)(items []interface{}, err
 	tx.Commit(); tx = nil
 
 	return items, nil
+}
+
+func (tb *sqlTable)SelectPrimary(key interface{})(item interface{}, err error){
+	items, err := tb.Select(WhereMap{{tb.sqltype.primaryKey, "=", key, ""}}, 1)
+	if err != nil { return }
+	if len(items) != 1 {
+		return nil, nil
+	}
+	return items[0], nil
+}
+
+func (tb *sqlTable)Count(wheremap WhereMap, limit ...uint)(n int64, err error){
+	n = 0
+	var(
+		tx   *sql.Tx
+		stmt *sql.Stmt
+		rows *sql.Rows
+	)
+	tx, err = tb.sqldb.DB().Begin()
+	if err != nil { return }
+	defer func(){ if tx != nil { tx.Rollback() } }()
+
+	var command string = "SELECT 1 FROM " + tb.name
+	wcmd, values := argv.Format()
+	command += wcmd
+
+	if len(limit) > 1 {
+		command += fmt.Sprintf(" LIMIT %d, %d", limit[0], limit[1])
+	}else if len(limit) > 0 {
+		command += fmt.Sprintf(" LIMIT %d", limit[0])
+	}
+
+	stmt, err = tx.Prepare(command)
+	if err != nil { return }
+	defer stmt.Close()
+
+	rows, err = stmt.Query(values...)
+	if err != nil { return }
+	defer rows.Close()
+
+	a := new(int)
+	for rows.Next() {
+		err = rows.Scan(a)
+		if err != nil { return }
+		n += 1
+	}
+	tx.Commit(); tx = nil
+
+	return n, nil
 }

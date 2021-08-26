@@ -104,7 +104,8 @@ type WhereMap []WhereValue
 ```sql
 WHERE `key1` = ? AND `key2` = ?
 ```
-其中, `?`为mysql的占位符, 实际所对应的值会在执行命令时由mysql进行填充以防止**注入攻击**
+其中, `?`为mysql的占位符, 实际所对应的值会在执行命令时由mysql进行填充以防止**注入攻击**  
+特别的, 对于`Update`方法, 如果传入的`wheremap`为`nil`且tag`sqlk`被指定, 那么会自动生成一个`WhereMap`, 指定该键的值为传入对象的值
 
 对于`Insert`方法, 返回的`n`代表操作后主键自增的值*(如果存在)*  
 对于`Delete`, `Update`方法, 返回的`n`代表受到影响的行数  

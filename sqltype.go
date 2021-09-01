@@ -51,5 +51,5 @@ func (sqltype *SqlType)newBy(row []interface{})(obj interface{}){
 		field := revalue.FieldByName(fie.Name)
 		setReflectValue(field, row[i])
 	}
-	return revalue.Interface()
+	return revalue.Addr().Interface()
 }

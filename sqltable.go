@@ -34,6 +34,7 @@ type SqlTable interface{
 	Delete(wheremap WhereMap, limit ...uint)(n int64, err error)
 	Update(ins interface{}, wheremap WhereMap, taglist []string, limit ...uint)(n int64, err error)
 	Select(wheremap WhereMap, limit ...uint)(rows []interface{}, err error)
+	SelectPrimary(key interface{})(item interface{}, err error)
 	Count(wheremap WhereMap, limit ...uint)(n int64, err error)
 }
 
@@ -140,14 +141,14 @@ func (tb *sqlTable)Update(ins interface{}, argv WhereMap, taglist []string, limi
 			if tag != tb.sqltype.primaryKey {
 				v := revalue.FieldByName(field.Name).Interface()
 				command += "`" + tag + "` = ?,"
-				values = append(values, v)
+				values = append(values, sqlization(v))
 			}
 		}
 	}else{
 		for _, tag := range taglist {
 			v := revalue.FieldByName(tb.sqltype.fieldMap[tag].Name).Interface()
 			command += "`" + tag + "` = ?,"
-			values = append(values, v)
+			values = append(values, sqlization(v))
 		}
 	}
 	command = command[:len(command) - 1]
@@ -236,7 +237,7 @@ func (tb *sqlTable)SelectPrimary(key interface{})(item interface{}, err error){
 	return items[0], nil
 }
 
-func (tb *sqlTable)Count(wheremap WhereMap, limit ...uint)(n int64, err error){
+func (tb *sqlTable)Count(argv WhereMap, limit ...uint)(n int64, err error){
 	n = 0
 	var(
 		tx   *sql.Tx

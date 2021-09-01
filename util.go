@@ -48,7 +48,7 @@ func newByType(ttype reflect.Type)(interface{}){
 		return new(string)
 	default:
 		switch ttype.Name() {
-		case "time.Time":
+		case "time.Time", "Time":
 			return new(time.Time)
 		}
 	}
@@ -60,26 +60,29 @@ func setReflectValue(rvalue reflect.Value, value interface{}){
 	rtype := rvalue.Type()
 	switch rtype.Kind() {
 	case reflect.Array:
-		hexstr := value.(string)
-		bytes, err := hex.DecodeString(hexstr)
-		if err == nil {
-			rvalue.SetBytes(bytes)
+		if rtype.Elem().Kind() == reflect.Uint8 {
+			hexstr := *(value.(*string))
+			bytes, err := hex.DecodeString(hexstr)
+			if err == nil {
+				bytesToByteArr(bytes, rvalue)
+			}
+			return
 		}
-	default:
-		rvalue.Set(reflect.ValueOf(value).Elem())
 	}
+	rvalue.Set(reflect.ValueOf(value).Elem())
 }
 
 func sqlizationReflect(rvalue reflect.Value)(interface{}){
 	rtype := rvalue.Type()
 	switch rtype.Kind() {
 	case reflect.Array:
-		bytes := rvalue.Bytes()
-		hexstr := hex.EncodeToString(bytes)
-		return hexstr
-	default:
-		return rvalue.Interface()
+		if rtype.Elem().Kind() == reflect.Uint8 {
+			bytes := byteArrToBytes(rvalue)
+			hexstr := hex.EncodeToString(bytes)
+			return hexstr
+		}
 	}
+	return rvalue.Interface()
 }
 
 func cloneReflectValue(basevalue reflect.Value)(revalue reflect.Value){
@@ -119,3 +122,20 @@ func cloneReflectValue(basevalue reflect.Value)(revalue reflect.Value){
 func cloneValue(base interface{})(re interface{}){
 	return cloneReflectValue(reflect.ValueOf(base)).Interface()
 }
+
+func byteArrToBytes(rvalue reflect.Value)(bytes []byte){
+	bytes = make([]byte, rvalue.Len())
+	for i, _ := range bytes {
+		bytes[i] = (byte)(rvalue.Index(i).Uint())
+	}
+	return
+}
+
+func bytesToByteArr(bytes []byte, bytearr reflect.Value){
+	for i, b := range bytes {
+		bytearr.Index(i).SetUint((uint64)(b))
+	}
+}
+
+
+

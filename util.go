@@ -137,5 +137,11 @@ func bytesToByteArr(bytes []byte, bytearr reflect.Value){
 	}
 }
 
-
+func getReValue(ins interface{})(revalue reflect.Value){
+	revalue = reflect.ValueOf(ins)
+	if revalue.Type().Kind() == reflect.Ptr {
+		revalue = revalue.Elem()
+	}
+	return revalue
+}
 

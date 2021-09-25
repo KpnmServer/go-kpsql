@@ -56,20 +56,37 @@ func newByType(ttype reflect.Type)(interface{}){
 	return reflect.New(ttype)
 }
 
-func setReflectValue(rvalue reflect.Value, value interface{}){
-	rtype := rvalue.Type()
+func setReflectValue(rvalue reflect.Value, v_ptr interface{}){
+	setReflectValueR(rvalue, reflect.ValueOf(v_ptr).Elem())
+}
+
+func setReflectValueR(rvalue1 reflect.Value, rvalue2 reflect.Value){
+	if rvalue1.Type().Kind() == reflect.Ptr {
+		rvalue1 = rvalue1.Elem()
+	}
+	rtype := rvalue1.Type()
 	switch rtype.Kind() {
+	case reflect.Bool:
+		rvalue1.SetBool(rvalue2.Bool())
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		rvalue1.SetInt(rvalue2.Int())
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		rvalue1.SetUint(rvalue2.Uint())
+	case reflect.Float32, reflect.Float64:
+		rvalue1.SetFloat(rvalue2.Float())
+	case reflect.String:
+		rvalue1.SetString(rvalue2.String())
 	case reflect.Array:
 		if rtype.Elem().Kind() == reflect.Uint8 {
-			hexstr := *(value.(*string))
+			hexstr := rvalue2.String()
 			bytes, err := hex.DecodeString(hexstr)
 			if err == nil {
-				bytesToByteArr(bytes, rvalue)
+				bytesToByteArr(bytes, rvalue1)
 			}
-			return
 		}
+	default:
+		rvalue1.Set(rvalue2)
 	}
-	rvalue.Set(reflect.ValueOf(value).Elem())
 }
 
 func sqlizationReflect(rvalue reflect.Value)(interface{}){
@@ -91,7 +108,7 @@ func cloneReflectValue(basevalue reflect.Value)(revalue reflect.Value){
 		basevalue = basevalue.Elem()
 		point_count++
 	}
-	
+
 	switch basevalue.Kind() {
 	case reflect.Slice:
 		bl := basevalue.Len()
@@ -111,7 +128,7 @@ func cloneReflectValue(basevalue reflect.Value)(revalue reflect.Value){
 		}
 	default:
 		revalue = reflect.New(basevalue.Type()).Elem()
-		revalue.Set(basevalue)
+		setReflectValueR(revalue, basevalue)
 	}
 	for ;point_count > 0 ;point_count-- {
 		revalue = revalue.Addr()
